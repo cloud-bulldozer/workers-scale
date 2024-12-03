@@ -27,6 +27,8 @@ import (
 	"github.com/kube-burner/kube-burner/pkg/measurements"
 	machinev1beta1 "github.com/openshift/client-go/machine/clientset/versioned/typed/machine/v1beta1"
 	log "github.com/sirupsen/logrus"
+	wscale "github.com/vishnuchalla/workers-scale/workerscale"
+	core "github.com/vishnuchalla/workers-scale/workerscale/core"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -36,7 +38,7 @@ import (
 
 type RosaScenario struct{}
 
-func (rosaScenario *RosaScenario) OrchestrateWorkload(scaleConfig ScaleConfig) string {
+func (rosaScenario *RosaScenario) OrchestrateWorkload(scaleConfig wscale.ScaleConfig) string {
 	var err error
 	var triggerJob string
 	var clusterID string
@@ -54,33 +56,33 @@ func (rosaScenario *RosaScenario) OrchestrateWorkload(scaleConfig ScaleConfig) s
 		}
 		mcKubeClientProvider := config.NewKubeClientProvider(scaleConfig.MCKubeConfig, "")
 		mcClientSet, mcRestConfig := mcKubeClientProvider.ClientSet(0, 0)
-		machineClient = getCAPIClient(mcRestConfig)
-		hcNamespace = getHCNamespace(mcClientSet, clusterID)
+		machineClient = wscale.GetCAPIClient(mcRestConfig)
+		hcNamespace = wscale.GetHCNamespace(mcClientSet, clusterID)
 	} else {
-		machineClient = getMachineClient(restConfig)
+		machineClient = wscale.GetMachineClient(restConfig)
 	}
 
 	if scaleConfig.ScaleEventEpoch != 0 && !scaleConfig.AutoScalerEnabled {
 		log.Info("Scale event epoch time specified. Hence calculating node latencies without any scaling")
-		setupMetrics(scaleConfig.UUID, scaleConfig.Metadata, kubeClientProvider)
+		wscale.SetupMetrics(scaleConfig.UUID, scaleConfig.Metadata, kubeClientProvider)
 		measurements.Start()
-		if err = waitForNodes(clientSet); err != nil {
+		if err = wscale.WaitForNodes(clientSet); err != nil {
 			log.Fatalf("Error waiting for nodes: %v", err)
 		}
 		scaledMachineDetails, amiID := getMachineDetails(machineClient, scaleConfig.ScaleEventEpoch, clusterID, hcNamespace, scaleConfig.IsHCP)
 		if err := measurements.Stop(); err != nil {
 			log.Error(err.Error())
 		}
-		finalizeMetrics(&sync.Map{}, scaledMachineDetails, scaleConfig.Metadata, scaleConfig.Indexer, amiID, scaleConfig.ScaleEventEpoch)
+		wscale.FinalizeMetrics(&sync.Map{}, scaledMachineDetails, scaleConfig.Metadata, scaleConfig.Indexer, amiID, scaleConfig.ScaleEventEpoch)
 		return amiID
 	} else {
 		prevMachineDetails, _ := getMachineDetails(machineClient, 0, clusterID, hcNamespace, scaleConfig.IsHCP)
-		setupMetrics(scaleConfig.UUID, scaleConfig.Metadata, kubeClientProvider)
+		wscale.SetupMetrics(scaleConfig.UUID, scaleConfig.Metadata, kubeClientProvider)
 		measurements.Start()
 
 		triggerTime = editMachinepool(clusterID, len(prevMachineDetails), len(prevMachineDetails)+scaleConfig.AdditionalWorkerNodes, scaleConfig.AutoScalerEnabled, scaleConfig.IsHCP)
 		if scaleConfig.AutoScalerEnabled {
-			triggerJob, triggerTime = createBatchJob(clientSet)
+			triggerJob, triggerTime = core.CreateBatchJob(clientSet)
 			// Slightly more delay for the cluster autoscaler resources to come up
 			time.Sleep(5 * time.Minute)
 		}
@@ -89,16 +91,16 @@ func (rosaScenario *RosaScenario) OrchestrateWorkload(scaleConfig ScaleConfig) s
 			log.Fatalf("Error waiting for MachineSets to be ready: %v", err)
 		}
 		scaledMachineDetails, amiID := getMachineDetails(machineClient, 0, clusterID, hcNamespace, scaleConfig.IsHCP)
-		discardPreviousMachines(prevMachineDetails, scaledMachineDetails)
+		wscale.DiscardPreviousMachines(prevMachineDetails, scaledMachineDetails)
 		if err := measurements.Stop(); err != nil {
 			log.Error(err.Error())
 		}
-		finalizeMetrics(&sync.Map{}, scaledMachineDetails, scaleConfig.Metadata, scaleConfig.Indexer, amiID, triggerTime.Unix())
+		wscale.FinalizeMetrics(&sync.Map{}, scaledMachineDetails, scaleConfig.Metadata, scaleConfig.Indexer, amiID, triggerTime.Unix())
 		if scaleConfig.GC {
 			log.Info("Restoring machine pool to previous state")
 			editMachinepool(clusterID, len(prevMachineDetails), len(prevMachineDetails), scaleConfig.AutoScalerEnabled, scaleConfig.IsHCP)
 			if scaleConfig.AutoScalerEnabled {
-				deleteBatchJob(clientSet, triggerJob)
+				core.DeleteBatchJob(clientSet, triggerJob)
 				time.Sleep(5 * time.Minute)
 			}
 			log.Info("Waiting for the machinesets to scale down")
@@ -175,7 +177,7 @@ func getClusterID(dynamicClient dynamic.Interface, mcPrescence bool) string {
 
 	// Special case for hcp where cluster version object has external ID
 	if mcPrescence {
-		cmd := exec.Command("bash", "-c", "rosa", "describe", "cluster", "-c", clusterID, "-o", "json")
+		cmd := exec.Command("rosa", "describe", "cluster", "-c", clusterID, "-o", "json")
 		output, err := cmd.CombinedOutput()
 		if err != nil {
 			log.Fatalf("Failed to describe cluster: %v. Output: %s", err, string(output))
@@ -194,17 +196,17 @@ func getClusterID(dynamicClient dynamic.Interface, mcPrescence bool) string {
 }
 
 // Function to fetch machine details based on the scenario (standard Rosa or RosaHCP).
-func getMachineDetails(machineClient interface{}, epoch int64, clusterID string, hcNamespace string, isHCP bool) (map[string]MachineInfo, string) {
+func getMachineDetails(machineClient interface{}, epoch int64, clusterID string, hcNamespace string, isHCP bool) (map[string]wscale.MachineInfo, string) {
 	if isHCP {
-		return getCapiMachines(machineClient.(client.Client), epoch, clusterID, hcNamespace)
+		return wscale.GetCapiMachines(machineClient.(client.Client), epoch, clusterID, hcNamespace)
 	}
-	return getMachines(machineClient.(*machinev1beta1.MachineV1beta1Client), epoch)
+	return wscale.GetMachines(machineClient.(*machinev1beta1.MachineV1beta1Client), epoch)
 }
 
 // Function to wait for worker MachineSets based on the scenario (standard Rosa or RosaHCP).
 func waitForWorkers(machineClient interface{}, clusterID string, hcNamespace string, isHCP bool) error {
 	if isHCP {
-		return waitForCAPIMachineSets(machineClient.(client.Client), clusterID, hcNamespace)
+		return wscale.WaitForCAPIMachineSets(machineClient.(client.Client), clusterID, hcNamespace)
 	}
-	return waitForWorkerMachineSets(machineClient.(*machinev1beta1.MachineV1beta1Client))
+	return wscale.WaitForWorkerMachineSets(machineClient.(*machinev1beta1.MachineV1beta1Client))
 }

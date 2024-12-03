@@ -33,12 +33,12 @@ import (
 )
 
 // helper function to create a pointer to an int32
-func int32Ptr(i int32) *int32 {
+func Int32Ptr(i int32) *int32 {
 	return &i
 }
 
-// discardPreviousMachines updates the current machines details discarding the previous ones
-func discardPreviousMachines(prevMachineDetails map[string]MachineInfo, currentMachineDetails map[string]MachineInfo) {
+// DiscardPreviousMachines updates the current machines details discarding the previous ones
+func DiscardPreviousMachines(prevMachineDetails map[string]MachineInfo, currentMachineDetails map[string]MachineInfo) {
 	for key := range currentMachineDetails {
 		if _, exists := prevMachineDetails[key]; exists {
 			delete(currentMachineDetails, key)
@@ -46,8 +46,8 @@ func discardPreviousMachines(prevMachineDetails map[string]MachineInfo, currentM
 	}
 }
 
-// getMachineClient creates a reusable machine client
-func getMachineClient(restConfig *rest.Config) *machinev1beta1.MachineV1beta1Client {
+// GetMachineClient creates a reusable machine client
+func GetMachineClient(restConfig *rest.Config) *machinev1beta1.MachineV1beta1Client {
 	machineClient, err := machinev1beta1.NewForConfig(restConfig)
 	if err != nil {
 		log.Fatalf("error creating machine API client: %s", err)
@@ -56,8 +56,8 @@ func getMachineClient(restConfig *rest.Config) *machinev1beta1.MachineV1beta1Cli
 	return machineClient
 }
 
-// getCAPIClient create a cluster api client
-func getCAPIClient(restConfig *rest.Config) client.Client {
+// GetCAPIClient create a cluster api client
+func GetCAPIClient(restConfig *rest.Config) client.Client {
 	capiScheme := runtime.NewScheme()
 	if err := v1beta1.AddToScheme(capiScheme); err != nil {
 		log.Fatalf("error adding CAPI types to scheme: %s", err)
@@ -83,8 +83,8 @@ func isNodeReady(node *v1.Node) bool {
 	return false
 }
 
-// waitForNodes waits for all the nodes to be ready
-func waitForNodes(clientset kubernetes.Interface) error {
+// WaitForNodes waits for all the nodes to be ready
+func WaitForNodes(clientset kubernetes.Interface) error {
 	return wait.PollUntilContextTimeout(context.TODO(), time.Second, maxWaitTimeout, true, func(ctx context.Context) (done bool, err error) {
 		nodes, err := clientset.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
 		if err != nil {
@@ -102,8 +102,8 @@ func waitForNodes(clientset kubernetes.Interface) error {
 	})
 }
 
-// getHCNamespace gets the longest hosted cluster namespace from management cluster
-func getHCNamespace(clientset kubernetes.Interface, clusterID string) string {
+// GetHCNamespace gets the longest hosted cluster namespace from management cluster
+func GetHCNamespace(clientset kubernetes.Interface, clusterID string) string {
 	namespaces, err := clientset.CoreV1().Namespaces().List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		log.Fatalf("Error listing the namespaces: %s", err)

@@ -31,7 +31,7 @@ build: $(BIN_PATH)
 $(BIN_PATH): $(SOURCES)
 	@echo -e "\033[2mBuilding $(BIN_PATH)\033[0m"
 	@echo "GOPATH=$(GOPATH)"
-	GOARCH=$(ARCH) CGO_ENABLED=$(CGO) go build -v -ldflags "-X $(VERSION_PKG).GitCommit=$(GIT_COMMIT) -X $(VERSION_PKG).BuildDate=$(BUILD_DATE) -X $(VERSION_PKG).Version=$(VERSION)" -o $(BIN_PATH) ./workers-scale/cmd/
+	GOARCH=$(ARCH) CGO_ENABLED=$(CGO) go build -v -ldflags "-X $(VERSION_PKG).GitCommit=$(GIT_COMMIT) -X $(VERSION_PKG).BuildDate=$(BUILD_DATE) -X $(VERSION_PKG).Version=$(VERSION)" -o $(BIN_PATH) ./workerscale/cmd/
 
 lint:
 	find . -name '*.go' -type f -exec go fmt {} \;

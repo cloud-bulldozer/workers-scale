@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package metrics
+package workerscale
 
 import (
 	"strings"
@@ -27,8 +27,8 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// setupMetrics sets up the measurment factory for us
-func setupMetrics(uuid string, metadata map[string]interface{}, kubeClientProvider *config.KubeClientProvider) {
+// SetupMetrics sets up the measurment factory for us
+func SetupMetrics(uuid string, metadata map[string]interface{}, kubeClientProvider *config.KubeClientProvider) {
 	configSpec := config.Spec{
 		GlobalConfig: config.GlobalConfig{
 			UUID: uuid,
@@ -48,8 +48,8 @@ func setupMetrics(uuid string, metadata map[string]interface{}, kubeClientProvid
 	)
 }
 
-// finalizeMetrics performs and indexes required metrics
-func finalizeMetrics(machineSetsToEdit *sync.Map, scaledMachineDetails map[string]MachineInfo, metadata map[string]interface{}, indexerValue indexers.Indexer, amiID string, scaleEventEpoch int64) {
+// FinalizeMetrics performs and indexes required metrics
+func FinalizeMetrics(machineSetsToEdit *sync.Map, scaledMachineDetails map[string]MachineInfo, metadata map[string]interface{}, indexerValue indexers.Indexer, amiID string, scaleEventEpoch int64) {
 	nodeMetrics := measurements.GetMetrics()
 	normLatencies, latencyQuantiles := calculateMetrics(machineSetsToEdit, scaledMachineDetails, metadata, nodeMetrics[0], amiID, scaleEventEpoch)
 	for _, q := range latencyQuantiles {
@@ -81,7 +81,7 @@ func calculateMetrics(machineSetsToEdit *sync.Map, scaledMachineDetails map[stri
 		if scaleEventEpoch == 0 {
 			msValue, _ := machineSetsToEdit.Load(machineSetName)
 			msInfo := msValue.(MachineSetInfo)
-			scaleEventTimestamp = msInfo.lastUpdatedTime
+			scaleEventTimestamp = msInfo.LastUpdatedTime
 		} else {
 			scaleEventTimestamp = time.Unix(scaleEventEpoch, 0).UTC()
 		}

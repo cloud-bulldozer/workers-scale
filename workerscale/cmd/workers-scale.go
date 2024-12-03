@@ -27,11 +27,14 @@ import (
 	"github.com/kube-burner/kube-burner/pkg/burner"
 	"github.com/kube-burner/kube-burner/pkg/config"
 	"github.com/kube-burner/kube-burner/pkg/prometheus"
+	"github.com/kube-burner/kube-burner/pkg/util"
 	"github.com/kube-burner/kube-burner/pkg/util/metrics"
 	"github.com/kube-burner/kube-burner/pkg/workloads"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	wscale "github.com/vishnuchalla/workers-scale"
+	wscale "github.com/vishnuchalla/workers-scale/workerscale"
+	core "github.com/vishnuchalla/workers-scale/workerscale/core"
+	platforms "github.com/vishnuchalla/workers-scale/workerscale/platforms"
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -54,13 +57,14 @@ const autoScaled = "autoScaled"
 const imageID = "imageId"
 
 var rootCmd = &cobra.Command{
-	Use:          "workers-scale",
-	Short:        "Scales openshift worker nodes and captures time spent",
-	Long:         `Utility to scale our openshift cluster's worker nodes to a desired count and capture their bootup times as day 2 operation`,
-	SilenceUsage: true,
-	PostRun: func(cmd *cobra.Command, args []string) {
-		log.Info("👋 Exiting kube-burner ", uuid)
-		os.Exit(rc)
+	Use:   "workers-scale",
+	Short: "Scales openshift worker nodes and captures time spent",
+	Long:  `Utility to scale our openshift cluster's worker nodes to a desired count and capture their bootup times as day 2 operation`,
+	PreRun: func(cmd *cobra.Command, args []string) {
+		if cmd.Name() == "version" {
+			return
+		}
+		util.ConfigureLogging(cmd)
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		if start == 0 {
@@ -139,7 +143,7 @@ var rootCmd = &cobra.Command{
 			break
 		}
 		scenario := fetchScenario(enableAutoscaler, clusterMetadata)
-		if _, ok := scenario.(*wscale.RosaScenario); ok {
+		if _, ok := scenario.(*platforms.RosaScenario); ok {
 			if clusterMetadata.MasterNodesCount == 0 && clusterMetadata.InfraNodesCount == 0 {
 				isHCP = true
 			}
@@ -160,9 +164,9 @@ var rootCmd = &cobra.Command{
 		metricsScraper.SummaryMetadata[imageID] = imageId
 		if end == 0 {
 			jobEnd = time.Now().Unix()
-			end = jobEnd + TenMinutes
+			end = jobEnd + wscale.TenMinutes
 		} else {
-			end += TenMinutes
+			end += wscale.TenMinutes
 		}
 		for _, prometheusClient := range metricsScraper.PrometheusClients {
 			prometheusJob := prometheus.Job{
@@ -195,6 +199,8 @@ var rootCmd = &cobra.Command{
 			Passed:     rc == 0,
 		}
 		burner.IndexJobSummary([]burner.JobSummary{jobSummary}, indexerValue)
+		log.Info("👋 Exiting workers-scale ", uuid)
+		os.Exit(rc)
 	},
 }
 
@@ -224,23 +230,24 @@ func init() {
 	rootCmd.Flags().StringVar(&userMetadata, "user-metadata", "", "User provided metadata file, in YAML format")
 	rootCmd.Flags().StringVar(&tarballName, "tarball-name", "", "Dump collected metrics into a tarball with the given name, requires local indexing")
 	rootCmd.Flags().SortFlags = false
+	util.SetupCmd(rootCmd)
+}
+
+// FetchScenario helps us to fetch relevant class
+func fetchScenario(enableAutoscaler bool, clusterMetadata ocpmetadata.ClusterMetadata) wscale.Scenario {
+	if clusterMetadata.ClusterType == "rosa" {
+		return &platforms.RosaScenario{}
+	} else {
+		if enableAutoscaler {
+			return &core.AutoScalerScenario{}
+		}
+		return &core.BaseScenario{}
+	}
 }
 
 func main() {
 	err := rootCmd.Execute()
 	if err != nil {
 		os.Exit(1)
-	}
-}
-
-// FetchScenario helps us to fetch relevant class
-func fetchScenario(enableAutoscaler bool, clusterMetadata ocpmetadata.ClusterMetadata) wscale.Scenario {
-	if clusterMetadata.ClusterType == "rosa" {
-		return &wscale.RosaScenario{}
-	} else {
-		if enableAutoscaler {
-			return &wscale.AutoScalerScenario{}
-		}
-		return &wscale.BaseScenario{}
 	}
 }

@@ -55,9 +55,9 @@ type MachineInfo struct {
 
 // MachineSetInfo provides information about a machineset resource
 type MachineSetInfo struct {
-	lastUpdatedTime time.Time
-	prevReplicas    int
-	currentReplicas int
+	LastUpdatedTime time.Time
+	PrevReplicas    int
+	CurrentReplicas int
 }
 
 // ProviderStatusCondition of a machine

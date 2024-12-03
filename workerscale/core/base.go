@@ -21,46 +21,47 @@ import (
 	"github.com/kube-burner/kube-burner/pkg/config"
 	"github.com/kube-burner/kube-burner/pkg/measurements"
 	log "github.com/sirupsen/logrus"
+	wscale "github.com/vishnuchalla/workers-scale/workerscale"
 )
 
 type BaseScenario struct{}
 
 // Returns a new scenario object
-func (awsScenario *BaseScenario) OrchestrateWorkload(scaleConfig ScaleConfig) string {
+func (awsScenario *BaseScenario) OrchestrateWorkload(scaleConfig wscale.ScaleConfig) string {
 	var err error
 	kubeClientProvider := config.NewKubeClientProvider("", "")
 	clientSet, restConfig := kubeClientProvider.ClientSet(0, 0)
-	machineClient := getMachineClient(restConfig)
+	machineClient := wscale.GetMachineClient(restConfig)
 	if scaleConfig.ScaleEventEpoch != 0 {
 		log.Info("Scale event epoch time specified. Hence calculating node latencies without any scaling")
-		setupMetrics(scaleConfig.UUID, scaleConfig.Metadata, kubeClientProvider)
+		wscale.SetupMetrics(scaleConfig.UUID, scaleConfig.Metadata, kubeClientProvider)
 		measurements.Start()
-		if err := waitForNodes(clientSet); err != nil {
+		if err := wscale.WaitForNodes(clientSet); err != nil {
 			log.Fatalf("Error waiting for nodes: %v", err)
 		}
 		if err = measurements.Stop(); err != nil {
 			log.Error(err.Error())
 		}
-		scaledMachineDetails, amiID := getMachines(machineClient, scaleConfig.ScaleEventEpoch)
-		finalizeMetrics(&sync.Map{}, scaledMachineDetails, scaleConfig.Metadata, scaleConfig.Indexer, amiID, scaleConfig.ScaleEventEpoch)
+		scaledMachineDetails, amiID := wscale.GetMachines(machineClient, scaleConfig.ScaleEventEpoch)
+		wscale.FinalizeMetrics(&sync.Map{}, scaledMachineDetails, scaleConfig.Metadata, scaleConfig.Indexer, amiID, scaleConfig.ScaleEventEpoch)
 		return amiID
 	} else {
-		machineSetDetails := getMachineSets(machineClient)
-		prevMachineDetails, _ := getMachines(machineClient, 0)
-		setupMetrics(scaleConfig.UUID, scaleConfig.Metadata, kubeClientProvider)
+		machineSetDetails := wscale.GetMachinesets(machineClient)
+		prevMachineDetails, _ := wscale.GetMachines(machineClient, 0)
+		wscale.SetupMetrics(scaleConfig.UUID, scaleConfig.Metadata, kubeClientProvider)
 		measurements.Start()
 		machineSetsToEdit := adjustMachineSets(machineSetDetails, scaleConfig.AdditionalWorkerNodes)
 		log.Info("Updating machinessets evenly to reach desired count")
-		editMachineSets(machineClient, clientSet, machineSetsToEdit, true)
+		wscale.EditMachineSets(machineClient, clientSet, machineSetsToEdit, true)
 		if err = measurements.Stop(); err != nil {
 			log.Error(err.Error())
 		}
-		scaledMachineDetails, amiID := getMachines(machineClient, 0)
-		discardPreviousMachines(prevMachineDetails, scaledMachineDetails)
-		finalizeMetrics(machineSetsToEdit, scaledMachineDetails, scaleConfig.Metadata, scaleConfig.Indexer, amiID, scaleConfig.ScaleEventEpoch)
+		scaledMachineDetails, amiID := wscale.GetMachines(machineClient, 0)
+		wscale.DiscardPreviousMachines(prevMachineDetails, scaledMachineDetails)
+		wscale.FinalizeMetrics(machineSetsToEdit, scaledMachineDetails, scaleConfig.Metadata, scaleConfig.Indexer, amiID, scaleConfig.ScaleEventEpoch)
 		if scaleConfig.GC {
 			log.Info("Restoring machine sets to previous state")
-			editMachineSets(machineClient, clientSet, machineSetsToEdit, false)
+			wscale.EditMachineSets(machineClient, clientSet, machineSetsToEdit, false)
 		}
 		return amiID
 	}
@@ -83,14 +84,14 @@ func adjustMachineSets(machineSetReplicas map[int][]string, desiredWorkerCount i
 			for index, machineSet := range machineSets {
 				if desiredWorkerCount > 0 {
 					if _, exists := machineSetsToEdit.Load(machineSet); !exists {
-						machineSetsToEdit.Store(machineSet, MachineSetInfo{
-							prevReplicas:    value,
-							currentReplicas: value + 1,
+						machineSetsToEdit.Store(machineSet, wscale.MachineSetInfo{
+							PrevReplicas:    value,
+							CurrentReplicas: value + 1,
 						})
 					}
 					msValue, _ := machineSetsToEdit.Load(machineSet)
-					msInfo := msValue.(MachineSetInfo)
-					msInfo.currentReplicas = value + 1
+					msInfo := msValue.(wscale.MachineSetInfo)
+					msInfo.CurrentReplicas = value + 1
 					machineSetsToEdit.Store(machineSet, msInfo)
 					machineSetReplicas[value+1] = append(machineSetReplicas[value+1], machineSet)
 					lastIndex = index

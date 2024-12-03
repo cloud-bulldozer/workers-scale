@@ -12,16 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package workerscale
 
 import "time"
 
 // Resource constants
 const JobName = "workers-scale"
-const machineNamespace = "openshift-machine-api"
-const defaultNamespace = "default"
-const defaultClusterAutoScaler = "default"
-const autoScalerBuffer = 10
+const MachineNamespace = "openshift-machine-api"
+const DefaultNamespace = "default"
+const DefaultClusterAutoScaler = "default"
+const AutoScalerBuffer = 10
 
 // Measurement constants
 const measurementName = "nodeLatency"
@@ -30,3 +30,4 @@ const nodeReadyLatencyQuantilesMeasurement = "nodeReadyLatencyQuantilesMeasureme
 
 // Misc constants
 const maxWaitTimeout = 4 * time.Hour
+const TenMinutes = 600
