@@ -1,0 +1,23 @@
+name: Linters
+on:
+  workflow_call:
+jobs:
+  linters:
+    runs-on: ubuntu-latest
+    steps:
+
+    - name: Check out code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 1
+        ref: ${{ github.event.pull_request.head.sha }}
+        persist-credentials: false
+
+    - name: Set up Go environment
+      run: go env -w GOPROXY=direct
+
+    - name: Update Go module dependencies
+      run: go mod tidy
+
+    - name: Run lint
+      run: make lint

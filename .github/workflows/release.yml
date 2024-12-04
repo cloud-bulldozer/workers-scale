@@ -1,0 +1,13 @@
+name: Release Workflow
+on:
+  push:
+    tags:
+      - "*"
+jobs:
+  ci-tests:
+    uses: ./.github/workflows/ci.yml
+    secrets: inherit
+
+  release-build:
+    uses: ./.github/workflows/gorelease.yml
+    needs: ci-tests
