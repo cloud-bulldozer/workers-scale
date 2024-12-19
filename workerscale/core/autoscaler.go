@@ -79,8 +79,8 @@ func CreateBatchJob(clientset kubernetes.Interface) (string, time.Time) {
 			GenerateName: "work-queue-",
 		},
 		Spec: batchv1.JobSpec{
-			Completions: wscale.Int32Ptr(1000),
-			Parallelism: wscale.Int32Ptr(1000),
+			Completions: wscale.Int32Ptr(5000),
+			Parallelism: wscale.Int32Ptr(5000),
 			Template: v1.PodTemplateSpec{
 				Spec: v1.PodSpec{
 					Containers: []v1.Container{
