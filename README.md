@@ -44,13 +44,17 @@ Flags:
 ### Examples
 1. Manually scale a cluster to desired node count and capture bootup times.
 ```
-$ workers-scale --additional-worker-nodes 24
+$ workers-scale --additional-worker-nodes 21
 ```
 2. Auto scale a cluster to a desired node count and capture bootup times. Also disable garbage collection.
 ```
-$ workers-scale --additional-worker-nodes 24 --enable-autoscaler --gc=false
+$ workers-scale --additional-worker-nodes 21 --enable-autoscaler --gc=false
 ```
 3. Without any scaling, simply capture bootup times on an already scaled cluster. We just have to specify the timestamp when the scale event was triggered.
 ```
 $ workers-scale --scale-event-epoch 1725635502
+```
+4. Incase of a ROSA HCP cluster, management cluster kubeconfig is required.
+```
+$ workers-scale --additional-worker-nodes 21 --mc-kubeconfig /tmp/secret/kube_burner_mc_kubeconfig
 ```

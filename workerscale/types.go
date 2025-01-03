@@ -60,6 +60,23 @@ type MachineSetInfo struct {
 	CurrentReplicas int
 }
 
+// MachinePool of a ROSA cluster
+type MachinePool struct {
+	ID          string      `json:"id"`
+	Replicas    int         `json:"replicas"`
+	Autoscaling Autoscaling `json:"autoscaling"`
+}
+
+// AutoScaling configuration for ROSA
+type Autoscaling struct {
+	// ROSA Classic fields
+	MinReplicas int `json:"min_replicas"`
+	MaxReplicas int `json:"max_replicas"`
+	// ROSA HCP fields
+	MinReplica int `json:"min_replica"`
+	MaxReplica int `json:"max_replica"`
+}
+
 // ProviderStatusCondition of a machine
 type ProviderStatusCondition struct {
 	LastTransitionTime metav1.Time `json:"lastTransitionTime"`
