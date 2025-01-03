@@ -27,6 +27,7 @@ const AutoScalerBuffer = 10
 const measurementName = "nodeLatency"
 const nodeReadyLatencyMeasurement = "nodeReadyLatencyMeasurement"
 const nodeReadyLatencyQuantilesMeasurement = "nodeReadyLatencyQuantilesMeasurement"
+const nodeReadyLatencyStackedMeasurement = "nodeReadyLatencyStackedMeasurement"
 
 // Misc constants
 const maxWaitTimeout = 4 * time.Hour

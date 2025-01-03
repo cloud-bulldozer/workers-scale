@@ -15,6 +15,7 @@
 package workerscale
 
 import (
+	"reflect"
 	"strings"
 	"sync"
 	"time"
@@ -51,14 +52,16 @@ func SetupMetrics(uuid string, metadata map[string]interface{}, kubeClientProvid
 // FinalizeMetrics performs and indexes required metrics
 func FinalizeMetrics(machineSetsToEdit *sync.Map, scaledMachineDetails map[string]MachineInfo, metadata map[string]interface{}, indexerValue indexers.Indexer, amiID string, scaleEventEpoch int64) {
 	nodeMetrics := measurements.GetMetrics()
-	normLatencies, latencyQuantiles := calculateMetrics(machineSetsToEdit, scaledMachineDetails, metadata, nodeMetrics[0], amiID, scaleEventEpoch)
+	normLatencies, latencyQuantiles, latencyStacked := calculateMetrics(machineSetsToEdit, scaledMachineDetails, metadata, nodeMetrics[0], amiID, scaleEventEpoch)
 	for _, q := range latencyQuantiles {
 		nq := q.(mmetrics.LatencyQuantiles)
 		log.Infof("%s: %s 50th: %v 99th: %v max: %v avg: %v", JobName, nq.QuantileName, nq.P50, nq.P99, nq.Max, nq.Avg)
 	}
 	metricMap := map[string][]interface{}{
-		nodeReadyLatencyMeasurement:          normLatencies,
+		nodeReadyLatencyMeasurement: normLatencies,
+		// TODO Deprecate quantiles after full transition to stacked measurements
 		nodeReadyLatencyQuantilesMeasurement: latencyQuantiles,
+		nodeReadyLatencyStackedMeasurement:   latencyStacked,
 	}
 	measurements.IndexLatencyMeasurement(mtypes.Measurement{Name: measurementName}, JobName, metricMap, map[string]indexers.Indexer{
 		"": indexerValue,
@@ -66,7 +69,7 @@ func FinalizeMetrics(machineSetsToEdit *sync.Map, scaledMachineDetails map[strin
 }
 
 // calculateMetrics calculates the metrics for node bootup times
-func calculateMetrics(machineSetsToEdit *sync.Map, scaledMachineDetails map[string]MachineInfo, metadata map[string]interface{}, nodeMetrics *sync.Map, amiID string, scaleEventEpoch int64) ([]interface{}, []interface{}) {
+func calculateMetrics(machineSetsToEdit *sync.Map, scaledMachineDetails map[string]MachineInfo, metadata map[string]interface{}, nodeMetrics *sync.Map, amiID string, scaleEventEpoch int64) ([]interface{}, []interface{}, []interface{}) {
 	var scaleEventTimestamp time.Time
 	var uuid, machineSetName string
 	var normLatencies, latencyQuantiles []interface{}
@@ -124,17 +127,32 @@ func calculateMetrics(machineSetsToEdit *sync.Map, scaledMachineDetails map[stri
 		quantileMap["NodeReady"] = append(quantileMap["NodeReady"], float64(normLatency.(NodeReadyMetric).NodeReadyLatency))
 	}
 
+	latencyStacked := NodeReadyLatencyStackedMeasurement{
+		UUID:        uuid,
+		JobName:     JobName,
+		BootImageID: amiID,
+		Metadata:    metadata,
+		Timestamp:   time.Now().UTC(),
+		MetricName:  nodeReadyLatencyStackedMeasurement,
+	}
+
 	calcSummary := func(name string, latencies []float64) mmetrics.LatencyQuantiles {
 		latencySummary := mmetrics.NewLatencySummary(latencies, name)
 		latencySummary.UUID = uuid
 		latencySummary.MetricName = nodeReadyLatencyQuantilesMeasurement
 		latencySummary.JobName = JobName
 		latencySummary.Metadata = metadata
+		reflect.ValueOf(&latencyStacked).Elem().FieldByName(name + "_" + "P99").Set(reflect.ValueOf(latencySummary.P99))
+		reflect.ValueOf(&latencyStacked).Elem().FieldByName(name + "_" + "P95").Set(reflect.ValueOf(latencySummary.P95))
+		reflect.ValueOf(&latencyStacked).Elem().FieldByName(name + "_" + "P50").Set(reflect.ValueOf(latencySummary.P50))
+		reflect.ValueOf(&latencyStacked).Elem().FieldByName(name + "_" + "Min").Set(reflect.ValueOf(latencySummary.Min))
+		reflect.ValueOf(&latencyStacked).Elem().FieldByName(name + "_" + "Max").Set(reflect.ValueOf(latencySummary.Max))
+		reflect.ValueOf(&latencyStacked).Elem().FieldByName(name + "_" + "Avg").Set(reflect.ValueOf(latencySummary.Avg))
 		return latencySummary
 	}
 
 	for condition, latencies := range quantileMap {
 		latencyQuantiles = append(latencyQuantiles, calcSummary(condition, latencies))
 	}
-	return normLatencies, latencyQuantiles
+	return normLatencies, latencyQuantiles, []interface{}{latencyStacked}
 }

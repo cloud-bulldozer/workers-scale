@@ -94,3 +94,37 @@ type NodeReadyMetric struct {
 	Labels                   map[string]string `json:"labels"`
 	Metadata                 interface{}       `json:"metadata,omitempty"`
 }
+
+// NodeReadyStacked to capture details on node bootup
+type NodeReadyLatencyStackedMeasurement struct {
+	UUID                string      `json:"uuid"`
+	BootImageID         string      `json:"bootImageID"`
+	MachineCreation_P99 int         `json:"machineCreation_P99"`
+	MachineCreation_P95 int         `json:"machineCreation_P95"`
+	MachineCreation_P50 int         `json:"machineCreation_P50"`
+	MachineCreation_Min int         `json:"machineCreation_min"`
+	MachineCreation_Max int         `json:"machineCreation_max"`
+	MachineCreation_Avg int         `json:"machineCreation_avg"`
+	MachineReady_P99    int         `json:"machineReady_P99"`
+	MachineReady_P95    int         `json:"machineReady_P95"`
+	MachineReady_P50    int         `json:"machineReady_P50"`
+	MachineReady_Min    int         `json:"machineReady_min"`
+	MachineReady_Max    int         `json:"machineReady_max"`
+	MachineReady_Avg    int         `json:"machineReady_avg"`
+	NodeCreation_P99    int         `json:"nodeCreation_P99"`
+	NodeCreation_P95    int         `json:"nodeCreation_P95"`
+	NodeCreation_P50    int         `json:"nodeCreation_P50"`
+	NodeCreation_Min    int         `json:"nodeCreation_min"`
+	NodeCreation_Max    int         `json:"nodeCreation_max"`
+	NodeCreation_Avg    int         `json:"nodeCreation_avg"`
+	NodeReady_P99       int         `json:"nodeReady_P99"`
+	NodeReady_P95       int         `json:"nodeReady_P95"`
+	NodeReady_P50       int         `json:"nodeReady_P50"`
+	NodeReady_Min       int         `json:"nodeReady_min"`
+	NodeReady_Max       int         `json:"nodeReady_max"`
+	NodeReady_Avg       int         `json:"nodeReady_avg"`
+	Timestamp           time.Time   `json:"timestamp"`
+	MetricName          string      `json:"metricName"`
+	JobName             string      `json:"jobName,omitempty"`
+	Metadata            interface{} `json:"metadata,omitempty"`
+}
