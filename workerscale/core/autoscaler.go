@@ -56,7 +56,7 @@ func (awsAutoScalerScenario *AutoScalerScenario) OrchestrateWorkload(scaleConfig
 	time.Sleep(5 * time.Minute)
 	waitForMachineSets(machineClient, clientSet, machineSetsToEdit, triggerTime)
 	if err = measurements.Stop(); err != nil {
-		log.Error(err.Error())
+		log.Fatal(err.Error())
 	}
 	scaledMachineDetails, amiID := wscale.GetMachines(machineClient, 0)
 	wscale.DiscardPreviousMachines(prevMachineDetails, scaledMachineDetails)
@@ -300,7 +300,7 @@ func waitForMachineSets(machineClient *machinev1beta1.MachineV1beta1Client, clie
 			defer wg.Done()
 			err := wscale.WaitForMachineSet(machineClient, ms, int32(r))
 			if err != nil {
-				log.Errorf("Failed waiting for MachineSet %s: %v", ms, err)
+				log.Fatalf("Failed waiting for MachineSet %s: %v", ms, err)
 			}
 		}(machineSet, msInfo.CurrentReplicas)
 		return true

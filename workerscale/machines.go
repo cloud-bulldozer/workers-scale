@@ -52,14 +52,14 @@ func GetMachines(machineClient *machinev1beta1.MachineV1beta1Client, scaleEventE
 				if amiID == "" {
 					var awsSpec AWSProviderSpec
 					if err := json.Unmarshal(machine.Spec.ProviderSpec.Value.Raw, &awsSpec); err != nil {
-						log.Errorf("error unmarshaling providerSpec: %v", err)
+						log.Fatalf("error unmarshaling providerSpec: %v", err)
 					}
 					amiID = awsSpec.AMI.ID
 				}
 				rawProviderStatus := machine.Status.ProviderStatus.Raw
 				var providerStatus ProviderStatus
 				if err := json.Unmarshal(rawProviderStatus, &providerStatus); err != nil {
-					log.Errorf("error unmarshaling providerStatus: %v", err)
+					log.Fatalf("error unmarshaling providerStatus: %v", err)
 				}
 				for _, condition := range providerStatus.Conditions {
 					if condition.Type == "MachineCreation" && condition.Status == "True" {
@@ -89,7 +89,7 @@ func GetCapiMachines(capiClient client.Client, scaleEventEpoch int64, clusterID 
 	machines := &capiv1beta1.MachineList{}
 	amiID, err := getAMIIDFromAWSMachineTemplates(capiClient, namespace)
 	if err != nil {
-		log.Errorf("error getting AMI ID from AWSMachineTemplates: %v", err)
+		log.Fatalf("error getting AMI ID from AWSMachineTemplates: %v", err)
 	}
 	if err := capiClient.List(context.TODO(), machines, client.InNamespace(namespace), labelSelector); err != nil {
 		log.Fatalf("Failed to list CAPI machines: %v", err)
@@ -150,7 +150,7 @@ func EditMachineSets(machineClient *machinev1beta1.MachineV1beta1Client, clientS
 			defer wg.Done()
 			err := updateMachineSetReplicas(machineClient, ms, int32(r), machineSetsToEdit)
 			if err != nil {
-				log.Errorf("Failed to edit MachineSet %s: %v", ms, err)
+				log.Fatalf("Failed to edit MachineSet %s: %v", ms, err)
 			}
 		}(machineSet, replica)
 		return true

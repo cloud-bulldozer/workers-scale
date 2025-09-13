@@ -71,7 +71,7 @@ func (rosaScenario *RosaScenario) OrchestrateWorkload(scaleConfig wscale.ScaleCo
 		}
 		scaledMachineDetails, amiID := getMachineDetails(machineClient, scaleConfig.ScaleEventEpoch, clusterID, hcNamespace, scaleConfig.IsHCP)
 		if err := measurements.Stop(); err != nil {
-			log.Error(err.Error())
+			log.Fatal(err.Error())
 		}
 		wscale.FinalizeMetrics(&sync.Map{}, scaledMachineDetails, scaleConfig.Metadata, scaleConfig.Indexer, amiID, scaleConfig.ScaleEventEpoch)
 		return amiID
@@ -104,7 +104,7 @@ func (rosaScenario *RosaScenario) OrchestrateWorkload(scaleConfig wscale.ScaleCo
 		scaledMachineDetails, amiID := getMachineDetails(machineClient, 0, clusterID, hcNamespace, scaleConfig.IsHCP)
 		wscale.DiscardPreviousMachines(prevMachineDetails, scaledMachineDetails)
 		if err := measurements.Stop(); err != nil {
-			log.Error(err.Error())
+			log.Fatal(err.Error())
 		}
 		wscale.FinalizeMetrics(&sync.Map{}, scaledMachineDetails, scaleConfig.Metadata, scaleConfig.Indexer, amiID, triggerTime.Unix())
 		if scaleConfig.AutoScalerEnabled {
