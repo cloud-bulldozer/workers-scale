@@ -40,7 +40,7 @@ func (awsScenario *BaseScenario) OrchestrateWorkload(scaleConfig wscale.ScaleCon
 			log.Fatalf("Error waiting for nodes: %v", err)
 		}
 		if err = measurements.Stop(); err != nil {
-			log.Error(err.Error())
+			log.Fatal(err.Error())
 		}
 		scaledMachineDetails, amiID := wscale.GetMachines(machineClient, scaleConfig.ScaleEventEpoch)
 		wscale.FinalizeMetrics(&sync.Map{}, scaledMachineDetails, scaleConfig.Metadata, scaleConfig.Indexer, amiID, scaleConfig.ScaleEventEpoch)
@@ -54,7 +54,7 @@ func (awsScenario *BaseScenario) OrchestrateWorkload(scaleConfig wscale.ScaleCon
 		log.Info("Updating machinessets evenly to reach desired count")
 		wscale.EditMachineSets(machineClient, clientSet, machineSetsToEdit, true)
 		if err = measurements.Stop(); err != nil {
-			log.Error(err.Error())
+			log.Fatal(err.Error())
 		}
 		scaledMachineDetails, amiID := wscale.GetMachines(machineClient, 0)
 		wscale.DiscardPreviousMachines(prevMachineDetails, scaledMachineDetails)
