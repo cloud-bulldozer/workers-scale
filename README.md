@@ -57,4 +57,4 @@ $ workers-scale --scale-event-epoch 1725635502
 4. Incase of a ROSA HCP cluster, management cluster kubeconfig is required.
 ```
 $ workers-scale --additional-worker-nodes 21 --mc-kubeconfig /tmp/secret/kube_burner_mc_kubeconfig
-```
+```a
