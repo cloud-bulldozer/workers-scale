@@ -210,7 +210,7 @@ func GetMachinesets(machineClient *machinev1beta1.MachineV1beta1Client) map[int]
 
 // WaitForMachineSet waits for machinesets to be ready with new replica count
 func WaitForMachineSet(machineClient *machinev1beta1.MachineV1beta1Client, name string, newReplicaCount int32) error {
-	return wait.PollUntilContextTimeout(context.TODO(), time.Second, maxWaitTimeout, true, func(ctx context.Context) (done bool, err error) {
+	return wait.PollUntilContextTimeout(context.TODO(), time.Second, MaxWaitTimeout, true, func(ctx context.Context) (done bool, err error) {
 		ms, err := machineClient.MachineSets(MachineNamespace).Get(context.TODO(), name, metav1.GetOptions{})
 		if err != nil {
 			return false, err
@@ -225,7 +225,7 @@ func WaitForMachineSet(machineClient *machinev1beta1.MachineV1beta1Client, name 
 
 // WaitForWorkerMachineSets waits for all the worker machinesets in specific to be ready
 func WaitForWorkerMachineSets(machineClient *machinev1beta1.MachineV1beta1Client) error {
-	return wait.PollUntilContextTimeout(context.TODO(), time.Second, maxWaitTimeout, true, func(_ context.Context) (done bool, err error) {
+	return wait.PollUntilContextTimeout(context.TODO(), time.Second, MaxWaitTimeout, true, func(_ context.Context) (done bool, err error) {
 		// Get all MachineSets with the worker label
 		labelSelector := metav1.ListOptions{
 			LabelSelector: "hive.openshift.io/machine-pool=worker",
@@ -247,7 +247,7 @@ func WaitForWorkerMachineSets(machineClient *machinev1beta1.MachineV1beta1Client
 
 // WaitForWorkerMachineSets waits for all the cluster-api type worker machinesets in specific to be ready
 func WaitForCAPIMachineSets(capiClient client.Client, clusterID string, namespace string) error {
-	return wait.PollUntilContextTimeout(context.TODO(), time.Second, maxWaitTimeout, true, func(_ context.Context) (done bool, err error) {
+	return wait.PollUntilContextTimeout(context.TODO(), time.Second, MaxWaitTimeout, true, func(_ context.Context) (done bool, err error) {
 		machineSetList := &capiv1beta1.MachineSetList{}
 		err = capiClient.List(context.TODO(), machineSetList, &client.ListOptions{
 			Namespace: namespace,

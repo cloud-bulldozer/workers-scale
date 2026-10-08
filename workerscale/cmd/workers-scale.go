@@ -232,6 +232,7 @@ func init() {
 	rootCmd.Flags().Int64Var(&scaleEventEpoch, "scale-event-epoch", 0, "Scale event epoch time")
 	rootCmd.Flags().StringVar(&userMetadata, "user-metadata", "", "User provided metadata file, in YAML format")
 	rootCmd.Flags().StringVar(&tarballName, "tarball-name", "", "Dump collected metrics into a tarball with the given name, requires local indexing")
+	rootCmd.Flags().DurationVar(&wscale.MaxWaitTimeout, "max-wait-timeout", 4*time.Hour, "Maximum time to wait for MachineSets to be ready")
 	rootCmd.Flags().SortFlags = false
 	util.SetupCmd(rootCmd)
 }
