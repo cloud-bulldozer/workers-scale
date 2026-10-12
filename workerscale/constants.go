@@ -33,4 +33,5 @@ const nodeReadyLatencyStackedMeasurement = "nodeReadyLatencyStackedMeasurement"
 
 // Misc constants
 var MaxWaitTimeout = 4 * time.Hour
+
 const TenMinutes = 600

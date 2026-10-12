@@ -19,7 +19,7 @@ jobs:
           go-version: 1.21.1
 
       - name: Set up Go environment
-        run: go env -w GOPROXY=direct
+        run: go env -w GOPROXY=https://proxy.golang.org,direct
 
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@master
