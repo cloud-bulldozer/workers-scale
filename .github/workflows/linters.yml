@@ -14,7 +14,7 @@ jobs:
         persist-credentials: false
 
     - name: Set up Go environment
-      run: go env -w GOPROXY=direct
+      run: go env -w GOPROXY=https://proxy.golang.org,direct
 
     - name: Update Go module dependencies
       run: go mod tidy
