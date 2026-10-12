@@ -85,7 +85,7 @@ func isNodeReady(node *v1.Node) bool {
 
 // WaitForNodes waits for all the nodes to be ready
 func WaitForNodes(clientset kubernetes.Interface) error {
-	return wait.PollUntilContextTimeout(context.TODO(), time.Second, maxWaitTimeout, true, func(ctx context.Context) (done bool, err error) {
+	return wait.PollUntilContextTimeout(context.TODO(), time.Second, MaxWaitTimeout, true, func(ctx context.Context) (done bool, err error) {
 		nodes, err := clientset.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
 		if err != nil {
 			return false, err
